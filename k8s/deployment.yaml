@@ -15,17 +15,17 @@ spec:
         app: task-server
     spec:
       containers:
-      - name: task-server
-        image: tu-usuario-docker/msc-procesos-tasks:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: PORT
-          value: "3000"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "500m"
+        - name: task-server
+          image: lisa0922/msc-procesos-tasks:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
