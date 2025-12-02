@@ -1,0 +1,106 @@
+# Versión 2.1 es el estándar para usar orbs y features avanzadas
+version: 2.1
+
+# -----------------
+# Orbs (Librerías externas)
+# -----------------
+orbs:
+  node: circleci/node@5.1.0
+  slack: circleci/slack@4
+
+# -----------------
+# Jobs
+# -----------------
+jobs:
+  # 1. SETUP & INSTALL
+  setup-and-install:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+      - node/install-packages
+      - persist_to_workspace:
+          root: .
+          paths:
+            - node_modules
+            - .
+
+  # 2. BUILD, TEST & LINT
+  test-and-lint:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run Build
+          command: npm run build
+      - run:
+          name: Run Tests
+          command: npm test
+      - run:
+          name: Run Lint
+          command: npm run lint
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+
+  # 3. DEPLOY (Simulación del despliegue)
+  deploy-simulate:
+    docker:
+      - image: cimg/base:2024.01
+    steps:
+      - attach_workspace:
+          at: .
+
+      # 🔍 Validación de Slack antes de ejecutar las notificaciones
+      - run:
+          name: Validate Slack Setup
+          command: |
+            if [ -z "$SLACK_ACCESS_TOKEN" ] && [ -z "$SLACK_WEBHOOK_URL" ]; then
+              echo "⚠️  No Slack credentials found. Notifications will be skipped."
+            else
+              echo "✅ Slack credentials detected."
+            fi
+
+      # 💬 Simulación del despliegue
+      - run:
+          name: Simulate Deployment
+          command: |
+            echo "--- Inicio de Simulación de Despliegue ---"
+            echo "Archivos listos para despliegue encontrados en 'dist/'"
+            echo "En un entorno real, esta etapa ejecutaría un script de despliegue SSH o a un servicio cloud."
+            ls -l dist
+            echo "--- Fin de Simulación ---"
+
+      # 📦 Guarda los artefactos
+      - store_artifacts:
+          path: dist
+          destination: build-artifacts
+
+# -----------------
+# Workflows
+# -----------------
+workflows:
+  build-test-deploy:
+    jobs:
+      - setup-and-install
+      - test-and-lint:
+          requires:
+            - setup-and-install
+      - deploy-simulate:
+          requires:
+            - test-and-lint
+          post-steps:
+            # ✅ Notificación de Éxito
+            - slack/notify:
+                event: pass
+                channel: "#circleci-alerts" # 🔁 Cambia por el canal real de tu Slack
+                template: success_with_artifacts
+
+            # ⚠️ Notificación de Fallo
+            - slack/notify:
+                event: fail
+                channel: "#circleci-alerts"
+                template: basic_fail

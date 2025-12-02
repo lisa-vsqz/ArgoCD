@@ -1,0 +1,102 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        deleteDir()
+        git credentialsId: 'github-cred', url: 'https://github.com/Chuviil/msc-procesos-tasks.git'
+      }
+    }
+
+    stage('Install Dependencies') {
+      steps {
+        bat 'npm install'
+      }
+    }
+
+    stage('Build') {
+      steps {
+        bat 'npm run build'
+      }
+    }
+
+    stage('Test') {
+      steps {
+        bat 'npm test'
+      }
+    }
+
+    stage('Lint') {
+      steps {
+        bat 'npm run lint'
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        powershell '''
+          $destination = "C:\\Users\\josue\\Downloads\\task-server"
+
+          if (-not (Test-Path $destination)) {
+            New-Item -ItemType Directory -Path $destination | Out-Null
+          }
+
+          foreach ($item in @("dist", "node_modules")) {
+            $target = Join-Path $destination $item
+            if (Test-Path $target) {
+              Remove-Item $target -Recurse -Force
+            }
+
+            Copy-Item -Path (Join-Path $PWD.Path $item) -Destination $destination -Recurse -Force
+          }
+
+          $serverScript = Join-Path $destination "dist\\server.js"
+
+          $existing = Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+            Where-Object { $_.CommandLine -and $_.CommandLine -like "*$serverScript*" }
+
+          if ($existing) {
+            $existing | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+          }
+
+          Start-Process -FilePath "node" -ArgumentList $serverScript -WorkingDirectory $destination
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      deleteDir()
+    }
+
+    success {
+      emailext(
+        subject: "Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        body: """
+Build ${env.JOB_NAME} #${env.BUILD_NUMBER} succeeded.
+
+Console output: ${env.BUILD_URL}
+        """,
+        recipientProviders: [requestor(), developers()]
+      )
+    }
+
+    failure {
+      emailext(
+        subject: "Build Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        body: """
+Build ${env.JOB_NAME} #${env.BUILD_NUMBER} failed.
+
+Console output: ${env.BUILD_URL}
+        """,
+        recipientProviders: [requestor(), developers(), culprits()]
+      )
+    }
+  }
+}
