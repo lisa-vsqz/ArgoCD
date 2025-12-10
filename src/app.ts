@@ -121,7 +121,7 @@ const createApp = (): express.Application => {
           return res
             .status(400)
             .json({
-              error: "Task priorities feature is not enabled for your user.",
+              error: "Task priorities feature is not enabled for your user",
             });
         }
       }
