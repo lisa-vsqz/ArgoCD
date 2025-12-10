@@ -12,7 +12,7 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
-      IMAGE_NAME: lisa0922/msc-procesos-tasks
+      IMAGE_NAME: lisa0922/task-server
 
     steps:
     - uses: actions/checkout@v4
