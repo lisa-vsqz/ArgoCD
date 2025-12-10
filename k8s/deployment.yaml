@@ -26,7 +26,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: launchdarkly-sdk
-                  key: sdk-key
+                  key: sdk-9c5ff1c2-d81e-4dc5-9245-a89d1d4819f3
           resources:
             requests:
               memory: "64Mi"
